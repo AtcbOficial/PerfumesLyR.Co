@@ -896,6 +896,13 @@ body.skin-navidad .card{border-color:#1b5e20}
       </button>
       <div class="tool-item-body">
         <h3 style="color:var(--gold);margin-bottom:8px;font-size:15px" id="formTitle">Agregar perfume</h3>
+        <div class="info-box" style="border-color:var(--gold)">
+          <strong style="color:var(--gold)">📥 Importar desde Control</strong><br>
+          JSON del master (código id, nombre, foto). Actualiza o crea por código.
+          <input type="file" id="importControlFile" accept=".json,application/json" style="margin:10px 0;display:block;width:100%">
+          <button type="button" class="btn" onclick="importFromControlJSON()">Importar JSON</button>
+          <p id="importControlStatus" style="font-size:11px;color:var(--muted);margin:8px 0 0"></p>
+        </div>
         <div class="info-box">
           Solo línea <strong style="color:var(--gold)">Premium</strong>. Sin precios.<br>
           Sube la imagen con el botón 📷 (PNG o JPG).
@@ -2086,6 +2093,88 @@ function clearForm() {
   renderProductTagsUI([]);
   pendingTags = [];
   renderProductTagsUI([]);
+}
+
+
+function normCodigoCat(c) {
+  return String(c || "").trim().toLowerCase();
+}
+function importFromControlJSON() {
+  var input = document.getElementById("importControlFile");
+  var st = document.getElementById("importControlStatus");
+  function setSt(t) { if (st) st.textContent = t; }
+  if (!input || !input.files || !input.files[0]) {
+    toast("Elige el JSON exportado desde Control");
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function() {
+    try {
+      var dataIn = JSON.parse(reader.result);
+      var items = Array.isArray(dataIn.items) ? dataIn.items : (Array.isArray(dataIn) ? dataIn : []);
+      if (!items.length) {
+        toast("El JSON no trae productos");
+        return;
+      }
+      var created = 0, updated = 0, skipped = 0;
+      var i = 0;
+      function next() {
+        if (i >= items.length) {
+          input.value = "";
+          var msg = "Import: " + created + " nuevo(s), " + updated + " actualizado(s)" + (skipped ? ", " + skipped + " omitido(s)" : "");
+          setSt(msg);
+          toast(msg);
+          try { renderAdminProducts(); } catch (e) {}
+          return;
+        }
+        var it = items[i++] || {};
+        var codigo = String(it.codigo || it.code || "").trim();
+        var nombre = String(it.nombre || it.name || "").trim();
+        var imgData = (typeof it.img === "string" && it.img.indexOf("data:image") === 0) ? it.img : "";
+        setSt("Procesando " + i + "/" + items.length + " · " + (codigo || "?"));
+        if (!codigo) { skipped++; setTimeout(next, 0); return; }
+        if (!nombre && !imgData) { skipped++; setTimeout(next, 0); return; }
+        var found = (products || []).find(function(p) {
+          return normCodigoCat(p.code) === normCodigoCat(codigo);
+        });
+        if (found) {
+          var payload = {};
+          if (nombre) payload.name = nombre;
+          payload.code = codigo;
+          if (imgData) payload.img = imgData;
+          db.ref("products/" + found.id).update(payload, function(err) {
+            if (err) console.warn(err);
+            else updated++;
+            setTimeout(next, 30);
+          });
+        } else {
+          var newId = Date.now() + i;
+          var payload = {
+            id: newId,
+            name: nombre || codigo,
+            code: codigo,
+            gender: "",
+            promo: false,
+            agotado: false,
+            tags: ["import"]
+          };
+          if (imgData) payload.img = imgData;
+          db.ref("products/" + newId).set(payload, function(err) {
+            if (err) console.warn(err);
+            else created++;
+            setTimeout(next, 30);
+          });
+        }
+      }
+      next();
+    } catch (e) {
+      console.error(e);
+      setSt("Error: " + (e.message || e));
+      toast("Error al importar: " + (e.message || e));
+    }
+  };
+  reader.onerror = function() { toast("No se pudo leer el archivo"); };
+  reader.readAsText(input.files[0]);
 }
 
 function saveProduct() {
