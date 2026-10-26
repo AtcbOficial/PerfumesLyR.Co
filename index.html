@@ -1401,16 +1401,16 @@ function onAdminFile(ev) {
       document.getElementById("pImg").value = "";
       document.getElementById("imgHint").textContent = "Nueva imagen lista · " + file.name + " (" + Math.round(dataUrl.length / 1024) + " KB)";
       toast("Imagen lista para guardar");
-    });
+    }, { fileType: file.type || "", fileName: file.name || "" });
   };
   reader.readAsDataURL(file);
 }
 
-/* Comprime para no saturar Firebase (máx ~900px, JPEG 0.72) */
-function compressImage(src, cb) {
+/* Redimensiona conservando transparencia (PNG) o JPEG alta calidad */
+function compressImage(src, cb, opt) {
   var img = new Image();
   img.onload = function() {
-    var max = 900;
+    var max = 1000;
     var w = img.width, h = img.height;
     if (w > max || h > max) {
       if (w > h) { h = Math.round(h * max / w); w = max; }
@@ -1419,10 +1419,14 @@ function compressImage(src, cb) {
     var canvas = document.createElement("canvas");
     canvas.width = w; canvas.height = h;
     var ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#111";
-    ctx.fillRect(0, 0, w, h);
+    ctx.clearRect(0, 0, w, h);
     ctx.drawImage(img, 0, 0, w, h);
-    var out = canvas.toDataURL("image/jpeg", 0.72);
+    var preferPng = false;
+    if (opt && opt.fileType) preferPng = /image\/(png|webp)/i.test(opt.fileType);
+    if (!preferPng && typeof src === "string" && src.indexOf("data:image/png") === 0) preferPng = true;
+    var out = preferPng
+      ? canvas.toDataURL("image/png")
+      : canvas.toDataURL("image/jpeg", 0.9);
     cb(out);
   };
   img.onerror = function() { toast("No se pudo leer la imagen"); };
