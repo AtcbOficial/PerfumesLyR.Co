@@ -268,15 +268,25 @@ input,select,textarea{width:100%;background:var(--card);border:1px solid #333;co
 .img-hint{font-size:11px;color:var(--muted);margin-bottom:10px;word-break:break-all}
 
 
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;padding:16px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:10060;align-items:center;justify-content:center;padding:16px}
 .modal-overlay.show{display:flex}
-.modal{background:var(--card);border-radius:16px;padding:20px;max-width:340px;width:100%;border:1px solid #333;animation:modalIn .25s ease}
+.modal{background:var(--card);border-radius:18px;padding:22px 18px 16px;max-width:360px;width:100%;border:1px solid #444;animation:modalIn .25s ease;box-shadow:0 12px 40px rgba(0,0,0,.55)}
 @keyframes modalIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
-.modal h3{color:var(--gold);margin-bottom:8px;font-size:16px}
-.modal .size-btns{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-.modal button{flex:1;min-width:80px;padding:12px 8px;border-radius:8px;border:1px solid #333;background:#222;color:var(--text);font-size:13px;cursor:pointer}
-.modal button.selected{background:var(--gold);color:#000;border-color:var(--gold)}
-.modal .confirm{width:100%;margin-top:4px;background:var(--gold);color:#000;border:none;font-weight:700;padding:12px;border-radius:8px;font-size:14px;cursor:pointer}
+.modal h3{color:var(--gold);margin-bottom:6px;font-size:17px;line-height:1.25;text-align:center}
+.modal .size-btns{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.modal .size-btns button{
+  flex:1;min-width:90px;padding:16px 8px;border-radius:12px;border:2px solid #444;
+  background:#1a1a1a;color:var(--text);font-size:16px;font-weight:800;cursor:pointer;
+  transition:transform .12s,background .15s,border-color .15s,box-shadow .15s;
+}
+.modal .size-btns button:active{transform:scale(.96)}
+.modal .size-btns button.selected,
+.modal .size-btns button:hover{
+  background:var(--gold);color:#000;border-color:var(--gold);
+  box-shadow:0 4px 16px rgba(201,162,39,.4);
+}
+.modal .confirm{width:100%;margin-top:4px;background:var(--gold);color:#000;border:none;font-weight:800;padding:14px;border-radius:12px;font-size:15px;cursor:pointer}
+.modal .modal-note{font-size:12px;color:var(--muted);text-align:center;margin:0 0 12px;line-height:1.35}
 
 .fly-dot{position:fixed;z-index:999;width:28px;height:28px;border-radius:50%;background:var(--gold);pointer-events:none;box-shadow:0 0 16px rgba(201,162,39,.95),0 0 4px #fff;display:flex;align-items:center;justify-content:center;font-size:13px;color:#000;font-weight:800;transition:transform .6s cubic-bezier(.2,.8,.2,1),opacity .6s ease}
 
@@ -957,17 +967,16 @@ body.skin-navidad .card{border-color:#1b5e20}
   </div>
 </section>
 
-<div class="modal-overlay" id="addModal">
-  <div class="modal">
+<div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <h3 id="modalTitle">Pedir</h3>
-    <p id="modalHint" style="font-size:13px;color:var(--muted);margin-bottom:10px">Escoge el tamaño</p>
+    <p class="modal-note" id="modalHint">Toca la capacidad que necesitas<br><strong style="color:var(--gold)">se agrega solo al carrito</strong></p>
     <div class="size-btns">
-      <button type="button" data-size="30" onclick="selectSize(30)">30 ml</button>
-      <button type="button" data-size="60" onclick="selectSize(60)">60 ml</button>
-      <button type="button" data-size="120" onclick="selectSize(120)">120 ml</button>
+      <button type="button" data-size="30" onclick="pickSizeAndAdd(30)">30 ml</button>
+      <button type="button" data-size="60" onclick="pickSizeAndAdd(60)">60 ml</button>
+      <button type="button" data-size="120" onclick="pickSizeAndAdd(120)">120 ml</button>
     </div>
-    <button class="confirm" id="confirmAddBtn" onclick="confirmAdd()">Pedir · meter al carrito</button>
-    <button class="btn btn-secondary" style="margin-top:8px;width:100%" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-secondary" style="margin-top:4px;width:100%" onclick="closeModal()">Cancelar</button>
   </div>
 </div>
 
@@ -1623,7 +1632,7 @@ function rebuildSizeButtons() {
   var sizes = getAvailableSizes();
   if (sizes.indexOf(selectedSize) === -1) selectedSize = sizes[0];
   box.innerHTML = sizes.map(function(s) {
-    return '<button type="button" data-size="' + s + '" onclick="selectSize(' + s + ')">' + s + ' ml</button>';
+    return '<button type="button" data-size="' + s + '" onclick="pickSizeAndAdd(' + s + ')">' + s + ' ml</button>';
   }).join("");
   updateModalButtons();
 }
@@ -1635,8 +1644,28 @@ function openAddModal(id, fromBtn) {
     return;
   }
   if (p.agotado) return;
-  /* Siempre directo al carrito; el cliente cambia ml en el carrito */
-  addToCartDirect(id, getDefaultSize(), fromBtn || null);
+  pendingProductId = id;
+  window._pedirFromBtn = fromBtn || null;
+  selectedSize = getDefaultSize();
+  rebuildSizeButtons();
+  var title = document.getElementById("modalTitle");
+  if (title) title.textContent = p.name || "Pedir";
+  var hint = document.getElementById("modalHint");
+  if (hint) {
+    hint.innerHTML = "Toca la capacidad que necesitas<br><strong style=\"color:var(--gold)\">se agrega solo al carrito</strong>";
+  }
+  document.getElementById("addModal").classList.add("show");
+}
+
+/* Al tocar 30/60/120 ml → entra al carrito al momento */
+function pickSizeAndAdd(size) {
+  if (!pendingProductId) return;
+  selectedSize = size;
+  updateModalButtons();
+  var fromEl = window._pedirFromBtn || document.getElementById("navCarrito");
+  var id = pendingProductId;
+  closeModal();
+  addToCartDirect(id, size, fromEl);
 }
 function closeModal() {
   document.getElementById("addModal").classList.remove("show");
