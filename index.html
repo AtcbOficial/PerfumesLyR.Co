@@ -144,20 +144,37 @@ h2{color:var(--gold);font-size:18px;margin-bottom:12px;border-bottom:1px solid #
 .sizes-hint{font-size:9px;color:var(--muted);margin-bottom:4px}
 .btns{margin-top:auto}
 .btns button.btn-pedir{
-  width:100%;border:none;padding:9px 4px;border-radius:7px;font-size:13px;font-weight:800;
-  cursor:pointer;background:var(--gold);color:#000;letter-spacing:.3px;
-  animation:addPulse 2s ease-in-out infinite;
-  box-shadow:0 2px 10px rgba(201,162,39,.35);
+  width:100%;border:none;padding:11px 6px;border-radius:8px;font-size:15px;font-weight:900;
+  cursor:pointer;background:var(--gold);color:#000;letter-spacing:.6px;
+  text-transform:uppercase;
+  animation:addPulse 1.4s ease-in-out infinite;
+  box-shadow:0 3px 14px rgba(201,162,39,.45);
   transition:transform .15s,box-shadow .15s;
+  line-height:1.15;
 }
-.btns button.btn-pedir:active{transform:scale(.96)}
+.btns button.btn-pedir:active{transform:scale(.94)}
 .btns button.disabled-agotado{
   width:100%;border:none;padding:12px 6px;border-radius:8px;font-size:15px;font-weight:700;
 }
 @keyframes addPulse{
-  0%,100%{box-shadow:0 2px 8px rgba(201,162,39,.3)}
-  50%{box-shadow:0 4px 16px rgba(201,162,39,.55)}
+  0%,100%{
+    transform:scale(1);
+    box-shadow:0 2px 10px rgba(201,162,39,.4),0 0 0 0 rgba(201,162,39,.35);
+    filter:brightness(1);
+  }
+  50%{
+    transform:scale(1.06);
+    box-shadow:0 6px 22px rgba(201,162,39,.75),0 0 0 6px rgba(201,162,39,.12);
+    filter:brightness(1.12);
+  }
 }
+.form-row-2{display:flex;gap:8px;align-items:flex-start;margin-bottom:10px}
+.form-row-2 .grow{flex:1;min-width:0}
+.form-row-2 .code-wrap{width:108px;flex-shrink:0}
+.form-row-2 input{margin-bottom:0}
+.form-row-2 label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.card-code{font-size:9px;color:var(--gold);font-weight:700;letter-spacing:.3px}
+
 
 /* Carrito con imagen */
 .cart-list-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
@@ -344,7 +361,7 @@ input,select,textarea{width:100%;background:var(--card);border:1px solid #333;co
 @media(min-width:600px){
   .card img,.card-img-wrap img{height:160px;padding:4px}
   .card-title{font-size:12px;min-height:32px}
-  .btns button.btn-pedir{font-size:15px;padding:11px 6px}
+  .btns button.btn-pedir{font-size:16px;padding:13px 8px}
 }
 @media(min-width:900px){
   .card img,.card-img-wrap img{height:190px}
@@ -873,7 +890,16 @@ body.skin-navidad .card{border-color:#1b5e20}
           Solo línea <strong style="color:var(--gold)">Premium</strong>. Sin precios.<br>
           Sube la imagen con el botón 📷 (PNG o JPG).
         </div>
-        <input type="text" id="pName" placeholder="Nombre del perfume">
+        <div class="form-row-2">
+          <div class="grow">
+            <label for="pName">Nombre del perfume</label>
+            <input type="text" id="pName" placeholder="Ej: ARMAF ODYSSEY MANDARIN SKY">
+          </div>
+          <div class="code-wrap">
+            <label for="pCode">Código ID</label>
+            <input type="text" id="pCode" placeholder="Ej: A-12" maxlength="24" style="text-transform:uppercase">
+          </div>
+        </div>
         <label>Imagen del perfume</label>
         <div class="upload-box" id="uploadBox" onclick="document.getElementById('pFile').click()">
           <strong>📷 Toca para subir imagen PNG / JPG</strong>
@@ -1529,7 +1555,7 @@ function productInCart(id) {
 function renderCatalog() {
   var q = (document.getElementById("search").value || "").toLowerCase();
   var list = products.filter(function(p) {
-    var matchQ = (p.name || "").toLowerCase().includes(q);
+    var matchQ = (p.name || "").toLowerCase().includes(q) || (p.code || "").toLowerCase().includes(q);
     var matchF = true;
     if (currentFilter === "all") matchF = true;
     else if (currentFilter === "promo") matchF = productHasTag(p, "masvendido");
@@ -1565,7 +1591,7 @@ function renderCatalog() {
           tagBadgesHtml(p) +
           (p.agotado ? '<span class="badge agotado">AGOTADO</span>' : '') +
         '</div>' +
-        '<div class="sizes-hint">' + sizesHintText() + '</div>' +
+        '<div class="sizes-hint">' + sizesHintText() + (p.code ? ' · <span class="card-code">' + escapeHtml(String(p.code)) + '</span>' : '') + '</div>' +
         '<div class="btns">' + btn + '</div>' +
       '</div></div>';
   }).join("");
@@ -1961,7 +1987,7 @@ function renderAdminProducts() {
     }).join("");
     return '<div class="product-admin' + (p.agotado ? ' agotado-row' : '') + '">' +
       '<img src="' + imgSrc(p.img) + '" alt="" onerror="this.src=\'' + imgFallback() + '\'">' +
-      '<div class="meta"><strong>' + escapeHtml(p.name) + '</strong><br>' +
+      '<div class="meta"><strong>' + escapeHtml(p.name) + '</strong>' + (p.code ? ' <span style="color:var(--gold);font-size:11px">' + escapeHtml(String(p.code)) + '</span>' : '') + '<br>' +
       '<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0">' + chips + '</div>' +
       (p.agotado ? '<span class="badge agotado">AGOTADO</span> ' : '') +
       '<span style="font-size:11px;color:var(--muted)">' + imgLabel(p.img) + '</span>' +
@@ -1998,6 +2024,7 @@ function editProduct(id) {
   editingId = id;
   document.getElementById("formTitle").textContent = "Editar perfume";
   document.getElementById("pName").value = p.name;
+  var pc = document.getElementById("pCode"); if (pc) pc.value = p.code || "";
   pendingImageData = null;
   document.getElementById("pImg").value = p.img || "";
   var pf = document.getElementById("pFile"); if (pf) pf.value = "";
@@ -2018,6 +2045,7 @@ function clearForm() {
   pendingImageData = null;
   document.getElementById("formTitle").textContent = "Agregar perfume";
   document.getElementById("pName").value = "";
+  var pc = document.getElementById("pCode"); if (pc) pc.value = "";
   document.getElementById("pImg").value = "";
   var pf = document.getElementById("pFile"); if (pf) pf.value = "";
   var ag = document.getElementById("pAgotado"); if (ag) ag.checked = false;
@@ -2041,7 +2069,10 @@ function saveProduct() {
   if (!tags.length) return toast("Agrega al menos una etiqueta (ej: Dama, Caballero…)");
   var promo = tags.indexOf("masvendido") !== -1 || tags.indexOf("promo") !== -1;
   var gender = genderFromTags(tags);
+  var code = (document.getElementById("pCode") && document.getElementById("pCode").value || "").trim().toUpperCase();
   var payload = { name: name, gender: gender, promo: promo, agotado: agotado, tags: tags };
+  if (code) payload.code = code;
+  else if (editingId) payload.code = null;
   if (img) payload.img = img;
   if (editingId) {
     if (!img) {
