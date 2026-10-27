@@ -917,12 +917,9 @@ body.skin-navidad .card{border-color:#1b5e20}
             <input type="text" id="pCode" placeholder="Ej: A-12" maxlength="24" style="text-transform:uppercase">
           </div>
         </div>
-        <label>Imagen del perfume</label>
-        <div class="upload-box" id="uploadBox" onclick="document.getElementById('pFile').click()">
-          <strong>📷 Toca para subir imagen PNG / JPG</strong>
-          <p>Se guarda sola · no hace falta el nombre del archivo</p>
-          <input type="file" id="pFile" accept="image/png,image/jpeg,image/webp,image/*" onchange="onAdminFile(event)">
-        </div>
+        <label>Link imagen del perfume</label>
+        <input type="url" id="pImgUrl" placeholder="https://… (Drive, OneDrive, web)" style="margin-bottom:8px">
+        <p class="info-box" style="margin-top:0">Solo URL pública. No se sube archivo al Firebase.</p>
         <img id="adminPreview" class="admin-preview" alt="Vista previa">
         <div class="img-hint" id="imgHint"></div>
         <input type="hidden" id="pImg" value="">
@@ -2065,7 +2062,12 @@ function editProduct(id) {
   document.getElementById("formTitle").textContent = "Editar perfume";
   document.getElementById("pName").value = p.name;
   var pc = document.getElementById("pCode"); if (pc) pc.value = p.code || "";
+  var piu = document.getElementById("pImgUrl");
+  if (piu) piu.value = (p.img && String(p.img).indexOf("http") === 0) ? p.img : "";
+  var ap = document.getElementById("adminPreview");
+  if (ap && piu && piu.value) { ap.src = piu.value; ap.classList.add("show"); }
   pendingImageData = null;
+  var _piu = document.getElementById("pImgUrl"); if (_piu) _piu.value = "";
   document.getElementById("pImg").value = p.img || "";
   var pf = document.getElementById("pFile"); if (pf) pf.value = "";
   normalizeProductTags(p);
@@ -2134,7 +2136,7 @@ function importFromControlJSON() {
         var it = items[i++] || {};
         var codigo = normCodigoCat(it.codigo || it.code || "");
         var nombre = String(it.nombre || it.name || "").trim();
-        var imgData = (typeof it.img === "string" && it.img.indexOf("data:image") === 0) ? it.img : "";
+        var imgData = (typeof it.img === "string" && it.img.indexOf("http") === 0) ? it.img : "";
         setSt("Procesando " + i + "/" + items.length + " · " + (codigo || "?"));
         if (!codigo) { skipped++; setTimeout(next, 0); return; }
         if (!nombre && !imgData) { skipped++; setTimeout(next, 0); return; }
@@ -2181,11 +2183,26 @@ function importFromControlJSON() {
   reader.readAsText(input.files[0]);
 }
 
+(function bindPerfImgUrl(){
+  var el = document.getElementById("pImgUrl");
+  if (!el || el._bound) return;
+  el._bound = true;
+  el.addEventListener("input", function(){
+    var v = (el.value || "").trim();
+    var ap = document.getElementById("adminPreview");
+    var hint = document.getElementById("imgHint");
+    if (ap && v.indexOf("http") === 0) { ap.src = v; ap.classList.add("show"); if (hint) hint.textContent = "Vista previa por link"; }
+    else if (ap && !v) { ap.removeAttribute("src"); ap.classList.remove("show"); }
+  });
+})();
 function saveProduct() {
   var name = document.getElementById("pName").value.trim();
   if (!name) return toast("Falta el nombre");
-  var img = pendingImageData || document.getElementById("pImg").value.trim();
-  if (!img && !editingId) return toast("Sube una foto del perfume");
+  var imgUrlEl = document.getElementById("pImgUrl");
+  var img = (imgUrlEl && imgUrlEl.value || "").trim() || pendingImageData || document.getElementById("pImg").value.trim();
+  if (img.indexOf("data:") === 0) img = "";
+  if (!img && !editingId) return toast("Pega el link https de la foto");
+  if (img && img.indexOf("http") !== 0 && img.indexOf("//") !== 0) return toast("La imagen debe ser un link http/https");
   var agotado = !!(document.getElementById("pAgotado") && document.getElementById("pAgotado").checked);
   var tags = getSelectedProductTags();
   if (!tags.length) return toast("Agrega al menos una etiqueta (ej: Dama, Caballero…)");
