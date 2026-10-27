@@ -824,7 +824,9 @@ body.skin-navidad .card{border-color:#1b5e20}
       </button>
       <div class="tool-item-body">
         <div class="info-box">Sube un <strong style="color:var(--gold)">PNG o JPG</strong> y se actualiza para todos.</div>
-        <div class="upload-box" onclick="document.getElementById('bannerFile').click()">
+        <label style="font-size:12px;color:var(--muted)">Link banner (https://…)</label>
+        <input type="url" id="bannerImgUrl" placeholder="https://… imagen pública del banner" style="width:100%;margin:6px 0;padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#eee">
+        <div class="upload-box" style="display:none" onclick="document.getElementById('bannerFile').click()">
           <strong>🖼️ Cambiar banner de bienvenida</strong>
           <p>Toca aquí y elige el archivo</p>
           <input type="file" id="bannerFile" accept="image/png,image/jpeg,image/webp,image/*" onchange="onBannerFile(event)">
@@ -937,7 +939,7 @@ body.skin-navidad .card{border-color:#1b5e20}
         <button class="btn btn-secondary" onclick="clearForm()">Limpiar / Nuevo</button>
 
         <hr style="border-color:#333;margin:16px 0">
-        <h3 style="color:var(--gold);margin-bottom:10px;font-size:15px">Catálogo actual</h3>
+        <h3 style="color:var(--gold);margin-bottom:10px;font-size:15px">Catálogo actual</h3><button type="button" class="btn-admin" onclick="cleanPerfImages()" style="margin-bottom:10px">🧹 Quitar imágenes embebidas</button>
         <div class="info-box" id="stockStats" style="text-align:center">
           <strong style="color:var(--gold)">Total:</strong> <span id="statTotal">0</span>
           &nbsp;·&nbsp; <strong style="color:#27ae60">Disponibles:</strong> <span id="statDisp">0</span>
@@ -2195,6 +2197,23 @@ function importFromControlJSON() {
     else if (ap && !v) { ap.removeAttribute("src"); ap.classList.remove("show"); }
   });
 })();
+function stripPerfBase64() {
+  var n = 0;
+  (products || []).forEach(function(p) {
+    if (p && typeof p.img === "string" && p.img.indexOf("data:") === 0) { p.img = ""; n++; }
+  });
+  return n;
+}
+function cleanPerfImages() {
+  var n = stripPerfBase64();
+  (products || []).forEach(function(p) {
+    if (!p || p.id == null) return;
+    var img = (p.img && String(p.img).indexOf("http") === 0) ? p.img : "";
+    db.ref("products/" + p.id).update({ img: img || null });
+  });
+  toast("Limpieza: " + n + " foto(s) base64 quitadas. Solo links https.");
+  try { renderAdminList(); renderCatalog(); } catch (e) {}
+}
 function saveProduct() {
   var name = document.getElementById("pName").value.trim();
   if (!name) return toast("Falta el nombre");
