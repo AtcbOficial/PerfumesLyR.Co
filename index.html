@@ -2101,7 +2101,7 @@ function clearForm() {
 
 
 function normCodigoCat(c) {
-  return String(c || "").trim().toLowerCase();
+  return String(c || "").trim().toUpperCase();
 }
 function importFromControlJSON() {
   var input = document.getElementById("importControlFile");
@@ -2132,7 +2132,7 @@ function importFromControlJSON() {
           return;
         }
         var it = items[i++] || {};
-        var codigo = String(it.codigo || it.code || "").trim();
+        var codigo = normCodigoCat(it.codigo || it.code || "");
         var nombre = String(it.nombre || it.name || "").trim();
         var imgData = (typeof it.img === "string" && it.img.indexOf("data:image") === 0) ? it.img : "";
         setSt("Procesando " + i + "/" + items.length + " · " + (codigo || "?"));
@@ -2191,7 +2191,14 @@ function saveProduct() {
   if (!tags.length) return toast("Agrega al menos una etiqueta (ej: Dama, Caballero…)");
   var promo = tags.indexOf("masvendido") !== -1 || tags.indexOf("promo") !== -1;
   var gender = genderFromTags(tags);
-  var code = (document.getElementById("pCode") && document.getElementById("pCode").value || "").trim().toUpperCase();
+  var code = normCodigoCat(document.getElementById("pCode") && document.getElementById("pCode").value || "");
+  if (code) {
+    var dup = (products || []).find(function(p) {
+      return normCodigoCat(p.code) === code && !sameId(p.id, editingId);
+    });
+    if (dup) return toast('Código id "' + code + '" ya existe en: ' + (dup.name || "otro producto"));
+    var pc = document.getElementById("pCode"); if (pc) pc.value = code;
+  }
   var payload = { name: name, gender: gender, promo: promo, agotado: agotado, tags: tags };
   if (code) payload.code = code;
   else if (editingId) payload.code = null;
