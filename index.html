@@ -2161,13 +2161,22 @@ function importFromControlJSON() {
           return normCodigoCat(p.code) === normCodigoCat(codigo);
         });
         if (found) {
+          /* Actualización: SOLO nombre + imagen (+ código). NO se tocan tags ni género ni agotado */
           var payload = {};
           if (nombre) payload.name = nombre;
           payload.code = codigo;
           if (imgData) payload.img = imgData;
           db.ref("products/" + found.id).update(payload, function(err) {
             if (err) console.warn(err);
-            else updated++;
+            else {
+              updated++;
+              try {
+                if (nombre) found.name = nombre;
+                found.code = codigo;
+                if (imgData) found.img = imgData;
+                /* tags, gender, promo, agotado se mantienen */
+              } catch (e2) {}
+            }
             setTimeout(next, 30);
           });
         } else {
