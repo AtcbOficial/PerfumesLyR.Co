@@ -1628,7 +1628,8 @@ function addToCartDirect(productId, size, fromEl) {
     name: p.name,
     size: size,
     img: p.img || "",
-    qty: 1
+    qty: 1,
+    codigo: (p.code || p.codigo || "")
   });
   /* Animación visible: el +1 vuela hacia el ícono del carrito */
   flyToCart(fromEl || document.getElementById("navCarrito"));
@@ -1704,7 +1705,8 @@ function confirmAdd() {
     name: p.name,
     size: selectedSize,
     img: p.img || "",
-    qty: 1
+    qty: 1,
+    codigo: (p.code || p.codigo || "")
   });
 
   var btn = document.getElementById("confirmAddBtn");
@@ -1866,16 +1868,29 @@ function sendWhatsApp() {
   lines.push("PEDIDO:");
   lines.push("");
   cart.forEach(function(c) {
-    var sizeStr = String(c.size).replace(/\s*ml$/i, "") + "ml";
+    var mlNum = String(c.size).replace(/\s*ml$/i, "").trim();
+    var sizeStr = mlNum + "ml";
     lines.push("• " + c.qty + " " + c.name + " " + sizeStr);
-    lines.push("");
   });
+  lines.push("");
+  cart.forEach(function(c) {
+    var cod = (c.codigo || "").trim();
+    if (!cod) {
+      var prod = products.find(function(x){ return sameId(x.id, c.id); });
+      if (prod) cod = String(prod.code || prod.codigo || "").trim();
+    }
+    var mlNum = String(c.size).replace(/\s*ml$/i, "").trim();
+    if (cod) lines.push(cod + ";" + mlNum + ";" + (c.qty || 1));
+  });
+  lines.push("");
+  lines.push("https://www.tiktok.com/@perfumeslr");
+  lines.push("https://www.instagram.com/perfumeslr26");
   try {
     var links = getSocialLinks();
     links.forEach(function(item) {
       if (item.isWhatsApp) return;
       var href = resolveSocialHref(item);
-      if (href && href !== "#") lines.push(href);
+      if (href && href !== "#" && lines.indexOf(href) === -1) lines.push(href);
     });
   } catch (e) {}
   var texto = lines.join("\n").replace(/\n+$/, "");
